@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human Digestive System Puzzle</title>
+    <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: sans-serif; background-color: #d8e3f1; color: #3b3b3b; display: flex; flex-direction: column; align-items: center; }
+        header { text-align: center; padding: 10px; background-color: #88b1f3; color: #3b3b3b; width: 100%; }
+        header h1 { font-size: 1.5em; font-weight: bold; }
+        #puzzle-container { 
+            display: grid; 
+            grid-template-columns: repeat(3, 100px); 
+            grid-template-rows: repeat(3, 100px); 
+            gap: 0px; 
+            margin: 20px auto; 
+            position: relative;
+        }
+        .puzzle-piece { 
+            width: 100px; 
+            height: 100px; 
+            background-size: 300px 300px; 
+            border: 1px solid whitesmoke; 
+            cursor: pointer; 
+            transition: transform 0.2s ease;
+            position: relative;
+        }
+        button { margin-top: 20px; padding: 10px 25px; font-size: 1em; color: #ffffff; background-color: #8e9aaf; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease; }
+        button:hover { background-color: #66717e; }
+        #result { margin-top: 20px; font-size: 1.8em; font-weight: bold; color: #3b3b3b; }
+    </style>
+</head>
+<body>
+    <header><h1>Human Digestive System</h1></header>
+    <section id="puzzle-container"></section>
+    <button onclick="checkWin()">Check Puzzle</button>
+    <div id="result"></div>
+    
+    <script>
+        const imageSrc = 'https://media.istockphoto.com/vectors/human-gastrointestinal-digestive-system-and-labels-vector-id1190819991?k=6&m=1190819991&s=170667a&w=0&h=N3nf9Y5cagnqtzNqtx9kyd8ZRPrURlALWlPqCI8PMpM=';
+        const puzzleContainer = document.getElementById("puzzle-container");
+        const result = document.getElementById("result");
+        let positions = [];
+        let draggedPiece, draggedOrder, initialX, initialY, offsetX, offsetY, originalOrder;
+
+        function generatePuzzle(imageSrc) {
+            positions = [];
+            puzzleContainer.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                let piece = document.createElement("div");
+                piece.classList.add("puzzle-piece");
+                piece.style.backgroundImage = `url(${imageSrc})`;
+                piece.style.backgroundPosition = `${-100 * (i % 3)}px ${-100 * Math.floor(i / 3)}px`;
+                piece.setAttribute("data-id", i);
+                piece.draggable = true;
+
+                // Mouse events for desktop
+                piece.addEventListener("dragstart", dragStart);
+                piece.addEventListener("dragover", dragOver);
+                piece.addEventListener("drop", drop);
+                piece.addEventListener("dragend", dragEnd);
+
+                // Touch events for mobile
+                piece.addEventListener("touchstart", touchStart);
+                piece.addEventListener("touchmove", touchMove);
+                piece.addEventListener("touchend", touchEnd);
+
+                positions.push(i);
+                puzzleContainer.appendChild(piece);
+            }
+
+            shufflePuzzle();
+        }
+
+        function shufflePuzzle() {
+            positions.sort(() => Math.random() - 0.5);
+            for (let i = 0; i < puzzleContainer.children.length; i++) {
+                puzzleContainer.children[i].style.order = positions[i];
+            }
+        }
+
+        // Mouse event handlers for desktop
+        function dragStart(event) {
+            draggedPiece = event.target;
+            originalOrder = draggedPiece.style.order;
+            draggedPiece.classList.add("dragging");
+
+            // Set the dragged piece's z-index so it's on top
+            draggedPiece.style.zIndex = 1000;
+        }
+
+        function dragOver(event) {
+            event.preventDefault();
+        }
+
+        function drop(event) {
+            event.preventDefault();
+            const target = event.target;
+            if (target !== draggedPiece) {
+                const targetOrder = target.style.order;
+
+                // Swap the order of the pieces visually but keep their original order intact
+                draggedPiece.style.order = targetOrder;
+                target.style.order = originalOrder;
+            }
+        }
+
+        function dragEnd(event) {
+            draggedPiece.classList.remove("dragging");
+            draggedPiece.style.zIndex = ""; // Reset z-index after dragging
+        }
+
+        // Touch event handlers for mobile
+        function touchStart(event) {
+            draggedPiece = event.target;
+            originalOrder = draggedPiece.style.order;
+
+            // Calculate initial positions for smooth dragging
+            const touchLocation = event.touches[0];
+            initialX = touchLocation.clientX;
+            initialY = touchLocation.clientY;
+            offsetX = 0;
+            offsetY = 0;
+
+            draggedPiece.style.position = "absolute";
+            draggedPiece.style.zIndex = 1000; // Bring to the front during drag
+            draggedPiece.classList.add("dragging");
+        }
+
+        function touchMove(event) {
+            const touchLocation = event.touches[0];
+            offsetX = touchLocation.clientX - initialX;
+            offsetY = touchLocation.clientY - initialY;
+
+            // Move the dragged piece visually without affecting the grid layout
+            draggedPiece.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+        }
+
+        function touchEnd(event) {
+            // Reset transformation and position
+            draggedPiece.style.transform = 'none';
+            draggedPiece.style.position = 'relative';
+            draggedPiece.style.zIndex = 'auto';
+
+            const changedTouch = event.changedTouches[0];
+            const target = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
+
+            if (target && target.classList.contains("puzzle-piece") && target !== draggedPiece) {
+                const targetOrder = target.style.order;
+                draggedPiece.style.order = targetOrder;
+                target.style.order = originalOrder;
+            }
+
+            draggedPiece.classList.remove("dragging");
+        }
+
+        function checkWin() {
+            let isWin = true;
+            for (let i = 0; i < puzzleContainer.children.length; i++) {
+                if (puzzleContainer.children[i].style.order != puzzleContainer.children[i].getAttribute("data-id")) {
+                    isWin = false;
+                    break;
+                }
+            }
+            result.innerText = isWin ? "You Win!" : "Try Again!";
+        }
+
+        generatePuzzle(imageSrc);
+    </script>
+</body>
+</html>
